@@ -22,15 +22,14 @@ if extension == '.sav':
     exit(1)
 
 f = open(args.file, 'r')
-saveJson = json.loads(f.read())
+save_json = json.loads(f.read())
 
-if args.output == None:
+if args.output is None:
     output_file = pathlib.Path(args.file).stem + '.sav'
 else:
     output_file = args.output
 
 output = open(output_file, 'wb')
-
 
 buffers = []
 
@@ -39,278 +38,278 @@ def write(bytes, count=True):
     if len(buffers) == 0:
         output.write(bytes)
     else:
-        buffers[len(buffers)-1]['buffer'].append(bytes)
+        buffers[len(buffers) - 1]['buffer'].append(bytes)
         if count:
-            buffers[len(buffers)-1]['length'] += len(bytes)
+            buffers[len(buffers) - 1]['length'] += len(bytes)
 
 
-def addBuffer():
+def add_buffer():
     """
     pushes a new buffer to the stack, so that the length of the following content can be written before the content
     """
     buffers.append({'buffer': [], 'length': 0})
 
 
-def endBufferAndWriteSize():
+def end_buffer_and_write_size():
     """
     ends the top buffer and writes it's context prefixed by the length (possibly into another buffer)
     """
-    buffer = buffers[len(buffers)-1]
+    buffer = buffers[len(buffers) - 1]
     buffers.remove(buffer)
     # writeInt(26214) # TODO length
-    writeInt(buffer['length'])
+    write_int(buffer['length'])
     for b in buffer['buffer']:
         write(b)
     return buffer['length']
 
 
-def assertFail(message):
+def assert_fail(message):
     print('failed: ' + message)
     input()
     assert False
 
 
-def writeInt(value, count=True):
+def write_int(value, count=True):
     write(struct.pack('i', value), count)
 
 
-def writeFloat(value):
+def write_float(value):
     write(struct.pack('f', value))
 
 
-def writeLong(value):
+def write_long(value):
     write(struct.pack('l', value))
 
 
-def writeByte(value, count=True):
+def write_byte(value, count=True):
     write(struct.pack('b', value), count)
 
 
-def writeLengthPrefixedString(value, count=True):
+def write_length_prefixed_string(value, count=True):
     if len(value) == 0:
-        writeInt(0, count)
+        write_int(0, count)
         return
-    writeInt(len(value)+1, count)
+    write_int(len(value) + 1, count)
     for i in value:
         write(struct.pack('b', ord(i)), count)
     write(b'\x00', count)
 
 
-def writeHex(value, count=True):
+def write_hex(value, count=True):
     write(bytearray.fromhex(value), count)
 
 
 # Header
-writeInt(saveJson['saveHeaderType'])
-writeInt(saveJson['saveVersion'])
-writeInt(saveJson['buildVersion'])
-writeLengthPrefixedString(saveJson['mapName'])
-writeLengthPrefixedString(saveJson['mapOptions'])
-writeLengthPrefixedString(saveJson['sessionName'])
-writeInt(saveJson['playDurationSeconds'])
-writeLong(saveJson['saveDateTime'])
-writeByte(saveJson['sessionVisibility'])
+write_int(save_json['save_header_type'])
+write_int(save_json['save_version'])
+write_int(save_json['build_version'])
+write_length_prefixed_string(save_json['map_name'])
+write_length_prefixed_string(save_json['map_options'])
+write_length_prefixed_string(save_json['session_name'])
+write_int(save_json['play_duration_seconds'])
+write_long(save_json['save_date_time'])
+write_byte(save_json['session_visibility'])
 
-writeInt(len(saveJson['objects']))
-
-
-def writeActor(obj):
-    writeLengthPrefixedString(obj['className'])
-    writeLengthPrefixedString(obj['levelName'])
-    writeLengthPrefixedString(obj['pathName'])
-    writeInt(obj['needTransform'])
-    writeFloat(obj['transform']['rotation'][0])
-    writeFloat(obj['transform']['rotation'][1])
-    writeFloat(obj['transform']['rotation'][2])
-    writeFloat(obj['transform']['rotation'][3])
-    writeFloat(obj['transform']['translation'][0])
-    writeFloat(obj['transform']['translation'][1])
-    writeFloat(obj['transform']['translation'][2])
-    writeFloat(obj['transform']['scale3d'][0])
-    writeFloat(obj['transform']['scale3d'][1])
-    writeFloat(obj['transform']['scale3d'][2])
-    writeInt(obj['wasPlacedInLevel'])
+write_int(len(save_json['objects']))
 
 
-def writeObject(obj):
-    writeLengthPrefixedString(obj['className'])
-    writeLengthPrefixedString(obj['levelName'])
-    writeLengthPrefixedString(obj['pathName'])
-    writeLengthPrefixedString(obj['outerPathName'])
+def write_actor(obj):
+    write_length_prefixed_string(obj['class_name'])
+    write_length_prefixed_string(obj['level_name'])
+    write_length_prefixed_string(obj['path_name'])
+    write_int(obj['need_transform'])
+    write_float(obj['transform']['rotation'][0])
+    write_float(obj['transform']['rotation'][1])
+    write_float(obj['transform']['rotation'][2])
+    write_float(obj['transform']['rotation'][3])
+    write_float(obj['transform']['translation'][0])
+    write_float(obj['transform']['translation'][1])
+    write_float(obj['transform']['translation'][2])
+    write_float(obj['transform']['scale3d'][0])
+    write_float(obj['transform']['scale3d'][1])
+    write_float(obj['transform']['scale3d'][2])
+    write_int(obj['was_placed_in_level'])
 
 
-for obj in saveJson['objects']:
-    writeInt(obj['type'])
+def write_object(obj):
+    write_length_prefixed_string(obj['class_name'])
+    write_length_prefixed_string(obj['level_name'])
+    write_length_prefixed_string(obj['path_name'])
+    write_length_prefixed_string(obj['outer_path_name'])
+
+
+for obj in save_json['objects']:
+    write_int(obj['type'])
     if obj['type'] == 1:
-        writeActor(obj)
+        write_actor(obj)
     elif obj['type'] == 0:
-        writeObject(obj)
+        write_object(obj)
     else:
-        assertFail('unknown type ' + str(type))
+        assert_fail('unknown type ' + str(type))
 
-writeInt(len(saveJson['objects']))
+write_int(len(save_json['objects']))
 
 
-def writeProperty(property):
-    writeLengthPrefixedString(property['name'])
+def write_property(property):
+    write_length_prefixed_string(property['name'])
     type = property['type']
-    writeLengthPrefixedString(type)
-    addBuffer()
-    writeInt(0, count=False)
+    write_length_prefixed_string(type)
+    add_buffer()
+    write_int(0, count=False)
     if type == 'IntProperty':
-        writeByte(0, count=False)
-        writeInt(property['value'])
+        write_byte(0, count=False)
+        write_int(property['value'])
     elif type == 'BoolProperty':
-        writeByte(property['value'], count=False)
-        writeByte(0, count=False)
+        write_byte(property['value'], count=False)
+        write_byte(0, count=False)
     elif type == 'FloatProperty':
-        writeByte(0, count=False)
-        writeFloat(property['value'])
+        write_byte(0, count=False)
+        write_float(property['value'])
     elif type == 'StrProperty':
-        writeByte(0, count=False)
-        writeLengthPrefixedString(property['value'])
+        write_byte(0, count=False)
+        write_length_prefixed_string(property['value'])
     elif type == 'NameProperty':
-        writeByte(0, count=False)
-        writeLengthPrefixedString(property['value'])
+        write_byte(0, count=False)
+        write_length_prefixed_string(property['value'])
     elif type == 'TextProperty':
-        writeByte(0, count=False)
-        writeHex(property['textUnknown'])
-        writeLengthPrefixedString(property['value'])
+        write_byte(0, count=False)
+        write_hex(property['textUnknown'])
+        write_length_prefixed_string(property['value'])
     elif type == 'ByteProperty':  # TODO
 
-        writeLengthPrefixedString(property['value']['unk1'], count=False)
+        write_length_prefixed_string(property['value']['unk1'], count=False)
         if property['value']['unk1'] == 'EGamePhase':
-            writeByte(0, count=False)
-            writeLengthPrefixedString(property['value']['unk2'])
+            write_byte(0, count=False)
+            write_length_prefixed_string(property['value']['unk2'])
         else:
-            writeByte(0, count=False)
-            writeByte(property['value']['unk2'])
+            write_byte(0, count=False)
+            write_byte(property['value']['unk2'])
     elif type == 'EnumProperty':
-        writeLengthPrefixedString(property['value']['enum'], count=False)
-        writeByte(0, count=False)
-        writeLengthPrefixedString(property['value']['value'])
+        write_length_prefixed_string(property['value']['enum'], count=False)
+        write_byte(0, count=False)
+        write_length_prefixed_string(property['value']['value'])
     elif type == 'ObjectProperty':
-        writeByte(0, count=False)
-        writeLengthPrefixedString(property['value']['levelName'])
-        writeLengthPrefixedString(property['value']['pathName'])
+        write_byte(0, count=False)
+        write_length_prefixed_string(property['value']['level_name'])
+        write_length_prefixed_string(property['value']['path_name'])
 
     elif type == 'StructProperty':
-        writeLengthPrefixedString(property['value']['type'], count=False)
-        writeHex(property['structUnknown'], count=False)
+        write_length_prefixed_string(property['value']['type'], count=False)
+        write_hex(property['structUnknown'], count=False)
 
         type = property['value']['type']
         if type == 'Vector' or type == 'Rotator':
-            writeFloat(property['value']['x'])
-            writeFloat(property['value']['y'])
-            writeFloat(property['value']['z'])
+            write_float(property['value']['x'])
+            write_float(property['value']['y'])
+            write_float(property['value']['z'])
         elif type == 'Box':
-            writeFloat(property['value']['min'][0])
-            writeFloat(property['value']['min'][1])
-            writeFloat(property['value']['min'][2])
-            writeFloat(property['value']['max'][0])
-            writeFloat(property['value']['max'][1])
-            writeFloat(property['value']['max'][2])
-            writeByte(property['value']['isValid'])
+            write_float(property['value']['min'][0])
+            write_float(property['value']['min'][1])
+            write_float(property['value']['min'][2])
+            write_float(property['value']['max'][0])
+            write_float(property['value']['max'][1])
+            write_float(property['value']['max'][2])
+            write_byte(property['value']['is_valid'])
         elif type == 'LinearColor':
-            writeFloat(property['value']['r'])
-            writeFloat(property['value']['g'])
-            writeFloat(property['value']['b'])
-            writeFloat(property['value']['a'])
+            write_float(property['value']['r'])
+            write_float(property['value']['g'])
+            write_float(property['value']['b'])
+            write_float(property['value']['a'])
         elif type == 'Transform':
             for prop in property['value']['properties']:
-                writeProperty(prop)
-            writeNone()
+                write_property(prop)
+            write_none()
         elif type == 'Quat':
-            writeFloat(property['value']['a'])
-            writeFloat(property['value']['b'])
-            writeFloat(property['value']['c'])
-            writeFloat(property['value']['d'])
+            write_float(property['value']['a'])
+            write_float(property['value']['b'])
+            write_float(property['value']['c'])
+            write_float(property['value']['d'])
         elif type == 'RemovedInstanceArray' or type == 'InventoryStack':
             for prop in property['value']['properties']:
-                writeProperty(prop)
-            writeNone()
+                write_property(prop)
+            write_none()
         elif type == 'InventoryItem':
-            writeLengthPrefixedString(property['value']['unk1'], count=False)
-            writeLengthPrefixedString(property['value']['itemName'])
-            writeLengthPrefixedString(property['value']['levelName'])
-            writeLengthPrefixedString(property['value']['pathName'])
-            oldval = buffers[len(buffers)-1]['length']
-            writeProperty(property['value']['properties'][0])
+            write_length_prefixed_string(property['value']['unk1'], count=False)
+            write_length_prefixed_string(property['value']['itemName'])
+            write_length_prefixed_string(property['value']['level_name'])
+            write_length_prefixed_string(property['value']['path_name'])
+            oldval = buffers[len(buffers) - 1]['length']
+            write_property(property['value']['properties'][0])
             # Dirty hack to make in this one case the inner property only take up 4 bytes
-            buffers[len(buffers)-1]['length'] = oldval + 4
+            buffers[len(buffers) - 1]['length'] = oldval + 4
 
     elif type == 'ArrayProperty':
-        itemType = property['value']['type']
-        writeLengthPrefixedString(itemType, count=False)
-        writeByte(0, count=False)
-        writeInt(len(property['value']['values']))
-        if itemType == 'IntProperty':
+        item_type = property['value']['type']
+        write_length_prefixed_string(item_type, count=False)
+        write_byte(0, count=False)
+        write_int(len(property['value']['values']))
+        if item_type == 'IntProperty':
             for obj in property['value']['values']:
-                writeInt(obj)
-        elif itemType == 'ObjectProperty':
+                write_int(obj)
+        elif item_type == 'ObjectProperty':
             for obj in property['value']['values']:
-                writeLengthPrefixedString(obj['levelName'])
-                writeLengthPrefixedString(obj['pathName'])
-        elif itemType == 'StructProperty':
-            writeLengthPrefixedString(property['structName'])
-            writeLengthPrefixedString(property['structType'])
-            addBuffer()
-            writeInt(0, count=False)
-            writeLengthPrefixedString(property['structInnerType'], count=False)
-            writeHex(property['structUnknown'], count=False)
+                write_length_prefixed_string(obj['level_name'])
+                write_length_prefixed_string(obj['path_name'])
+        elif item_type == 'StructProperty':
+            write_length_prefixed_string(property['struct_name'])
+            write_length_prefixed_string(property['struct_type'])
+            add_buffer()
+            write_int(0, count=False)
+            write_length_prefixed_string(property['structInnerType'], count=False)
+            write_hex(property['structUnknown'], count=False)
             for obj in property['value']['values']:
                 for prop in obj['properties']:
-                    writeProperty(prop)
-                writeNone()
-            structLength = endBufferAndWriteSize()
-            if (structLength != property['_structLength']):
-                print('struct: ' + str(structLength) +
+                    write_property(prop)
+                write_none()
+            struct_length = end_buffer_and_write_size()
+            if struct_length != property['_structLength']:
+                print('struct: ' + str(struct_length) +
                       '/' + str(property['_structLength']))
                 print(json.dumps(property, indent=4))
     elif type == 'MapProperty':
-        writeLengthPrefixedString(property['value']['name'], count=False)
-        writeLengthPrefixedString(property['value']['type'], count=False)
-        writeByte(0, count=False)
-        writeInt(0)  # for some reason this counts towards the length
+        write_length_prefixed_string(property['value']['name'], count=False)
+        write_length_prefixed_string(property['value']['type'], count=False)
+        write_byte(0, count=False)
+        write_int(0)  # for some reason this counts towards the length
 
-        writeInt(len(property['value']['values']))
+        write_int(len(property['value']['values']))
         for key, value in property['value']['values'].items():
-            writeInt(int(key))
+            write_int(int(key))
             for prop in value:
-                writeProperty(prop)
-            writeNone()
-    length = endBufferAndWriteSize()
-    if (length != property['_length']):
+                write_property(prop)
+            write_none()
+    length = end_buffer_and_write_size()
+    if length != property['_length']:
         print(str(length) + '/' + str(property['_length']))
         print(json.dumps(property, indent=4))
 
 
-def writeNone():
-    writeLengthPrefixedString('None')
+def write_none():
+    write_length_prefixed_string('None')
 
 
-def writeEntity(withNames, obj):
-    addBuffer()  # size will be written at this place later
-    if withNames:
-        writeLengthPrefixedString(obj['levelName'])
-        writeLengthPrefixedString(obj['pathName'])
-        writeInt(len(obj['children']))
+def write_entity(with_names, obj):
+    add_buffer()  # size will be written at this place later
+    if with_names:
+        write_length_prefixed_string(obj['level_name'])
+        write_length_prefixed_string(obj['path_name'])
+        write_int(len(obj['children']))
         for child in obj['children']:
-            writeLengthPrefixedString(child['levelName'])
-            writeLengthPrefixedString(child['pathName'])
+            write_length_prefixed_string(child['level_name'])
+            write_length_prefixed_string(child['path_name'])
 
     for property in obj['properties']:
-        writeProperty(property)
-    writeNone()
+        write_property(property)
+    write_none()
 
-    writeHex(obj['missing'])
-    endBufferAndWriteSize()
+    write_hex(obj['missing'])
+    end_buffer_and_write_size()
 
 
-for obj in saveJson['objects']:
+for obj in save_json['objects']:
     if obj['type'] == 1:
-        writeEntity(True, obj['entity'])
+        write_entity(True, obj['entity'])
     elif obj['type'] == 0:
-        writeEntity(False, obj['entity'])
+        write_entity(False, obj['entity'])
 
-writeHex(saveJson['missing'])
+write_hex(save_json['missing'])
