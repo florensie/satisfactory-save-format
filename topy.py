@@ -4,21 +4,6 @@ Converts Satisfactory save games (.sav) into a Python dict
 """
 import struct
 import sys
-import argparse
-import pathlib
-
-parser = argparse.ArgumentParser(
-    description='Converts Satisfactory save games into a more readable format')
-parser.add_argument('file', metavar='FILE', type=str,
-                    help='save game to process (.sav file extension)')
-parser.add_argument('--output', '-o', type=str, help='output file (.sav)')
-
-args = parser.parse_args()
-
-extension = pathlib.Path(args.file).suffix
-if extension != '.sav':
-    print('error: extension of save file should be .sav', file=sys.stderr)
-    exit(1)
 
 
 def to_py(file_path):
@@ -51,7 +36,7 @@ def to_py(file_path):
     def read_long():
         global bytesRead
         bytesRead += 8
-        return struct.unpack('l', f.read(8))[0]
+        return struct.unpack('q', f.read(8))[0]
 
     def read_byte():
         global bytesRead

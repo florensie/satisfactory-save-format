@@ -50,7 +50,7 @@ def to_save(save_dict):
         write(struct.pack('f', value))
 
     def write_long(value):
-        write(struct.pack('l', value))
+        write(struct.pack('q', value))
 
     def write_byte(value, count=True):
         write(struct.pack('b', value), count)
